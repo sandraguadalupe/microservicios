@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
+import uvicorn
+import os
 
 app = FastAPI()
 
@@ -77,3 +79,8 @@ def predict_house(data: dict):
     return {
         "prediccion_saleprice": round(float(pred), 2)
     }
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
