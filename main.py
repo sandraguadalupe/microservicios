@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-import uvicorn
-import os
 
 app = FastAPI()
 
@@ -17,27 +15,36 @@ def home():
 
 @app.post("/train")
 def train_model():
+
     global model
 
+    # Cargar dataset
     df = pd.read_csv("train.csv")
 
+    # Imputar valores faltantes
     df['Electrical'] = df['Electrical'].fillna(df['Electrical'].mode()[0])
 
+    # Codificar columnas categóricas
     categorical_cols = df.select_dtypes(include=['object']).columns
     df_encoded = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
 
+    # Variables independiente / dependiente
     X = df_encoded.drop("SalePrice", axis=1)
     y = df_encoded["SalePrice"]
 
+    # Asegurar que no haya NaNs
     X = X.select_dtypes(include=np.number).dropna(axis=1)
 
+    # División entrenamiento/prueba
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
+    # Entrenar modelo
     model = LinearRegression()
     model.fit(X_train, y_train)
 
+    # Métrica simple
     r2 = model.score(X_test, y_test)
 
     return {
@@ -47,6 +54,7 @@ def train_model():
 
 @app.post("/predict")
 def predict_house(data: dict):
+
     global model
 
     if model is None:
@@ -54,6 +62,7 @@ def predict_house(data: dict):
 
     df_input = pd.DataFrame([data])
 
+    # Asegurar columnas consistentes
     for col in model.feature_names_in_:
         if col not in df_input.columns:
             df_input[col] = 0
@@ -65,7 +74,3 @@ def predict_house(data: dict):
     return {
         "prediccion_saleprice": round(float(pred), 2)
     }
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
